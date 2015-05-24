@@ -49,18 +49,13 @@ type GoSharpNode struct {
     ID string
     URL string
     Load int64
+    Available bool
 }
 func (v *GoSharpNode) DoProxy(w http.ResponseWriter, req *http.Request) {
-    v.Load++
-
     proxy_url := fmt.Sprintf("http://127.0.0.1:%v%v", v.URL, req.RequestURI)
     fmt.Println(fmt.Sprintf("serve %v, proxy http://%v%v to %v", req.RemoteAddr, req.Host, req.RequestURI, proxy_url))
 
-    v.doProxy(proxy_url, w, req)
-    v.Load--
-}
-func (v *GoSharpNode) doProxy(url string, w http.ResponseWriter, req *http.Request) {
-    if proxy_req,err := http.Get(url); err != nil {
+    if proxy_req,err := http.Get(proxy_url); err != nil {
         fmt.Println(fmt.Sprintf("serve %v, proxy failed, err is %v", req.RemoteAddr, err))
         return
     } else {
@@ -82,6 +77,7 @@ func NewGoSharpContext(servers []string) *GoSharpContext {
         node := &GoSharpNode{}
         node.ID = server
         node.URL = server
+        node.Available = true
         v.LB[node.ID] = node
     }
 
@@ -90,8 +86,11 @@ func NewGoSharpContext(servers []string) *GoSharpContext {
 func (v *GoSharpContext) ChooseBest() *GoSharpNode {
     var match *GoSharpNode
 
-    // TODO: FIXME: support detect node status.
     for _,node := range v.LB {
+        if !node.Available {
+            continue
+        }
+
         if match == nil || match.Load > node.Load {
             match = node
         }
@@ -120,8 +119,16 @@ func goSharpRun() int {
     // the static dir dispatch router.
     http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
         //fmt.Println("server", req.RemoteAddr)
-        proxy_server := ctx.ChooseBest()
-        proxy_server.DoProxy(w, req)
+        node := ctx.ChooseBest()
+
+        // update the load.
+        node.Load++
+        defer func() {
+            node.Load--
+        } ()
+
+        // do proxy.
+        node.DoProxy(w, req)
     })
 
     if err = http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
