@@ -4,11 +4,11 @@ The go-sharp(go-srs-http-advanced-reverse-proxy) is the proxy for SRS HTTP FLV.
 
 ## Usage
 
-<strong>Step 1:</strong> Setup GO env.
+<strong>Step 1: Setup GO env.</strong>
 
 About how to set $GOPATH, read [prepare go](http://blog.csdn.net/win_lin/article/details/40618671).
 
-<strong>Step 2:</strong> Get go-sharp and build it.
+<strong>Step 2: Get go-sharp and build it.</strong>
 
 To clone from github, build, install to $GOPATH and build go-sharp:
 
@@ -16,7 +16,7 @@ To clone from github, build, install to $GOPATH and build go-sharp:
 go get github.com/simple-rtmp-server/go-sharp
 ```
 
-<strong>Step 3:</strong> Start go-sharp.
+<strong>Step 3: Start go-sharp proxy.</strong>
 
 For linux or unix:
 
@@ -30,11 +30,11 @@ Or, for windows:
 %GOPATH%\bin\go-sharp.exe 8088 8 8080,8081,8082
 ```
 
-<strong>Step 4:</strong> Start SRS HTTP FLV cluster.
+<strong>Step 4: Start SRS HTTP FLV cluster.</strong>
 
 About how to start HTTP FLV cluster of SRS, read wiki([CN][v2_CN_SampleHttpFlvCluster], [EN][v2_EN_SampleHttpFlvCluster])
 
-<strong>Step 5:</strong> Play the proxy HTTP FLV stream.
+<strong>Step 5: Play the proxy HTTP FLV stream.</strong>
 
 The HTTP FLV streams:
 
@@ -48,6 +48,14 @@ go-sharp proxy: http://127.0.0.1:8088/live/livestream.flv
 You can use [vlc][vlc] or online jwplayer players to play [SRS Origin][jwplayer-flv],
 [SRS Edge1][jwplayer-flv-8081], [SRS Edge2][jwplayer-flv-8082] and [go-sharp proxy][jwplayer-flv-8088].
 
+Remark: Please replace the server ip by yours.
+
+## Features
+
+* Reverse HTTP proxy for SRS HTTP FLV cluster.
+* Auto detect the alive of proxy SRS server.
+* Load balance for these proxe SRS server.
+
 ## IDE
 
 Go: http://www.golangtc.com/download
@@ -55,12 +63,6 @@ Go: http://www.golangtc.com/download
 JetBrains IntelliJ IDEA: http://www.jetbrains.com/idea/download
 
 Idea Plugin: https://github.com/go-lang-plugin-org/go-lang-idea-plugin
-
-## Features
-
-* Reverse HTTP proxy for SRS HTTP FLV cluster.
-* Auto detect the alive of proxy SRS server.
-* Load balance for these proxe SRS server.
 
 Winlin 2015.5
 
