@@ -55,6 +55,7 @@ Remark: Please replace the server ip by yours.
 * Reverse HTTP proxy for SRS HTTP FLV cluster.
 * Load balance for these proxe SRS server.
 * [comming soon] Auto detect the alive of proxy SRS server.
+* [plan] HLS DRM token, generate and verify the token in ts url.
 
 ## IDE
 

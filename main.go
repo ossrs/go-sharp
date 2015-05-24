@@ -9,6 +9,8 @@ import (
     "net/http"
     "strings"
     "io"
+    "time"
+    "io/ioutil"
 )
 
 const VERSION = "1.0.0"
@@ -51,6 +53,7 @@ type GoSharpNode struct {
     Load int64
     Available bool
 }
+
 func (v *GoSharpNode) DoProxy(w http.ResponseWriter, req *http.Request) {
     proxy_url := fmt.Sprintf("http://127.0.0.1:%v%v", v.URL, req.RequestURI)
     fmt.Println(fmt.Sprintf("serve %v, proxy http://%v%v to %v", req.RemoteAddr, req.Host, req.RequestURI, proxy_url))
@@ -64,29 +67,58 @@ func (v *GoSharpNode) DoProxy(w http.ResponseWriter, req *http.Request) {
     }
 }
 
-type GoSharpContext struct {
-    // key: id of node
-    LB map[string]*GoSharpNode
+func (v *GoSharpNode) Detect() (err error) {
+    url := fmt.Sprintf("http://127.0.0.1:%v/api/v1/versions", v.URL)
+    //fmt.Println("detect node", url)
+
+    var res *http.Response
+    if res,err = http.Get(url); err != nil {
+        v.Available = false
+        return
+    }
+    defer res.Body.Close()
+
+    var srs []byte
+    if srs,err = ioutil.ReadAll(res.Body); err != nil {
+        v.Available = false
+        return
+    }
+
+    if strings.Contains(string(srs), "version") {
+        v.Available = true
+    }
+    //fmt.Println("detect node", url, "status is", string(srs))
+
+    return
 }
+
+type GoSharpContext struct {
+    nodes []string
+    // key: id of node
+    lb map[string]*GoSharpNode
+}
+
 func NewGoSharpContext(servers []string) *GoSharpContext {
     v := &GoSharpContext{}
 
-    v.LB = make(map[string]*GoSharpNode)
+    v.nodes = servers
+    v.lb = make(map[string]*GoSharpNode)
 
     for _,server := range servers {
         node := &GoSharpNode{}
         node.ID = server
         node.URL = server
         node.Available = true
-        v.LB[node.ID] = node
+        v.lb[node.ID] = node
     }
 
     return v
 }
+
 func (v *GoSharpContext) ChooseBest() *GoSharpNode {
     var match *GoSharpNode
 
-    for _,node := range v.LB {
+    for _,node := range v.lb {
         if !node.Available {
             continue
         }
@@ -97,6 +129,35 @@ func (v *GoSharpContext) ChooseBest() *GoSharpNode {
     }
 
     return match
+}
+
+func (v *GoSharpContext) Detect() (err error) {
+    defer func() {
+        if r := recover(); r != nil {
+            switch r := r.(type) {
+                case error:
+                err = r
+                default:
+                fmt.Println("unknown panic", r)
+            }
+        }
+    } ()
+
+    //fmt.Println("auto detect nodes", v.nodes)
+    report := "auto detect: "
+    for _,node := range v.lb {
+        // ignore any error.
+        node.Detect()
+
+        status := "online"
+        if !node.Available {
+            status = "offline"
+        }
+        report = fmt.Sprintf("%v%v(%v), ", report, node.ID, status)
+    }
+    fmt.Println(report)
+
+    return
 }
 
 func goSharpRun() int {
@@ -130,6 +191,18 @@ func goSharpRun() int {
         // do proxy.
         node.DoProxy(w, req)
     })
+
+    // detect the status of all SRS.
+    go func() {
+       defer func() {
+           for {
+               if err := ctx.Detect(); err != nil {
+                   fmt.Println("context sync server error:", err)
+               }
+               time.Sleep(time.Duration(3) * time.Second)
+           }
+       }()
+    }()
 
     if err = http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
         fmt.Println("http serve failed and err is", err)
