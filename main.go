@@ -8,6 +8,7 @@ import (
     "runtime"
     "net/http"
     "strings"
+    "io"
 )
 
 const VERSION = "1.0.0"
@@ -44,6 +45,61 @@ func goSharpParseOptions() (port, nbCpus int, pports string, err error) {
     return
 }
 
+type GoSharpNode struct {
+    ID string
+    URL string
+    Load int64
+}
+func (v *GoSharpNode) DoProxy(w http.ResponseWriter, req *http.Request) {
+    v.Load++
+
+    proxy_url := fmt.Sprintf("http://127.0.0.1:%v%v", v.URL, req.RequestURI)
+    fmt.Println(fmt.Sprintf("serve %v, proxy http://%v%v to %v", req.RemoteAddr, req.Host, req.RequestURI, proxy_url))
+
+    v.doProxy(proxy_url, w, req)
+    v.Load--
+}
+func (v *GoSharpNode) doProxy(url string, w http.ResponseWriter, req *http.Request) {
+    if proxy_req,err := http.Get(url); err != nil {
+        fmt.Println(fmt.Sprintf("serve %v, proxy failed, err is %v", req.RemoteAddr, err))
+        return
+    } else {
+        written,_ := io.Copy(w, proxy_req.Body)
+        fmt.Println(fmt.Sprintf("server %v, proxy completed, written is %v", req.RemoteAddr, written))
+    }
+}
+
+type GoSharpContext struct {
+    // key: id of node
+    LB map[string]*GoSharpNode
+}
+func NewGoSharpContext(servers []string) *GoSharpContext {
+    v := &GoSharpContext{}
+
+    v.LB = make(map[string]*GoSharpNode)
+
+    for _,server := range servers {
+        node := &GoSharpNode{}
+        node.ID = server
+        node.URL = server
+        v.LB[node.ID] = node
+    }
+
+    return v
+}
+func (v *GoSharpContext) ChooseBest() *GoSharpNode {
+    var match *GoSharpNode
+
+    // TODO: FIXME: support detect node status.
+    for _,node := range v.LB {
+        if match == nil || match.Load > node.Load {
+            match = node
+        }
+    }
+
+    return match
+}
+
 func goSharpRun() int {
     port, nbCpus, pports, err := goSharpParseOptions()
     if err != nil {
@@ -55,12 +111,17 @@ func goSharpRun() int {
     targets := strings.Split(pports, ",")
     fmt.Println(fmt.Sprintf("proxy %v to %v, use %v cpus", targets, port, nbCpus));
 
+    // the context for go sharp.
+    ctx := NewGoSharpContext(targets)
+
     // max cpus to use
     runtime.GOMAXPROCS(nbCpus)
 
     // the static dir dispatch router.
     http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-        return
+        //fmt.Println("server", req.RemoteAddr)
+        proxy_server := ctx.ChooseBest()
+        proxy_server.DoProxy(w, req)
     })
 
     if err = http.ListenAndServe(fmt.Sprintf(":%d", port), nil); err != nil {
