@@ -182,6 +182,11 @@ func goSharpRun() int {
         //fmt.Println("server", req.RemoteAddr)
         node := ctx.ChooseBest()
 
+        if node == nil {
+            fmt.Println("no online node.")
+            return
+        }
+
         // update the load.
         node.Load++
         defer func() {
