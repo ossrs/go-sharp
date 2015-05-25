@@ -14,9 +14,10 @@ import (
 )
 
 const VERSION = "1.0.0"
+const AUTHORS = "winlin,youngcow"
 
 func goSharpParseOptions() (port, nbCpus int, pports string, err error) {
-    fmt.Println("go-sharp", VERSION, "is a go srs http-flv advanced reverse proxy, auto detect and load balance")
+    fmt.Println("go-sharp", VERSION, "is a go srs http-flv advanced reverse proxy, copyright (c)", AUTHORS)
 
     if len(os.Args) <= 3 {
         fmt.Println("Usage:", os.Args[0], "<port> <nb_cpus> <proxy_port0>[,<proxy_port1>,<proxy_portN>]")
