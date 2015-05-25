@@ -58,6 +58,10 @@ Remark: Please replace the server ip by yours.
 * [plan] Auto detect the load of proxy SRS server.
 * [plan] HLS DRM token, generate and verify the token in ts url.
 
+## Performance
+
+Comming soon ...
+
 ## IDE
 
 Go: http://www.golangtc.com/download
