@@ -1,5 +1,7 @@
 # go-sharp
 
+Archived for it's rarely used.
+
 GO-Sharp is a multiple process solution for HTTP-FLV of [SRS](https://github.com/ossrs/srs).
 
 Recommend to use:
